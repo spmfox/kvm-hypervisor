@@ -6,14 +6,14 @@
       ansible.builtin.template:
         src: "systemd/{{ item }}.j2"
         dest: "/etc/systemd/system/{{ item }}"
-      loop: "{{ services }}"
+      loop: "{{ systemd_services }}"
       register: systemd1
 
     - name: Create systemd unit files for timers
       ansible.builtin.template:
         src: "systemd/{{ item }}.j2"
         dest: "/etc/systemd/system/{{ item }}"
-      loop: "{{ timers }}"
+      loop: "{{ systemd_timers }}"
       register: systemd2
 
     - name: Reload systemd daemon if needed
@@ -26,4 +26,4 @@
         name: "{{ item }}"
         state: started
         enabled: true
-      loop: "{{ timers }}"
+      loop: "{{ systemd_timers }}"
