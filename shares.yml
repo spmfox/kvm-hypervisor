@@ -1,0 +1,14 @@
+- hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Set correct selinux contexts for mounts
+      community.general.sefcontext:
+        target: "{{ item.path }}(/.*)?"
+        setype: "{{ item.context }}"
+        state: present
+      loop: "{{ shares }}"
+
+    - name: Restore selinux contexts for mounts
+      ansible.builtin.shell: "restorecon -R {{ item.path }}"
+      loop: "{{ shares }}"

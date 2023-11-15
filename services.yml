@@ -1,0 +1,142 @@
+- hosts: localhost
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Block for starting services
+      block:
+        - name: Unmount bind mounts
+          ansible.posix.mount:
+            path: "{{ item.path }}"
+            state: unmounted
+          loop: "{{ bind_mounts }}"
+
+        - name: Starting bind mounts
+          ansible.posix.mount:
+            path: "{{ item.path }}"
+            src: "{{ item.src }}"
+            opts: bind
+            state: mounted
+            fstype: none
+          loop: "{{ bind_mounts }}"
+
+        - name: Set correct selinux contexts for mounts
+          community.general.sefcontext:
+            target: "{{ item.src }}(/.*)?"
+            setype: "{{ item.context }}"
+            state: present
+          loop: "{{ bind_mounts }}"
+
+        - name: Restore selinux contexts for mounts
+          ansible.builtin.shell: "restorecon -Rv {{ item.src }}"
+          loop: "{{ bind_mounts }}"
+
+        - name: Restart services
+          ansible.builtin.systemd_service:
+            name: "{{ item.name }}"
+            state: restarted
+          loop: "{{ services }}"
+      tags:
+        - never
+        - services-start
+
+
+    - name: Block for stopping services
+      block:
+        - name: Check running VMs
+          community.libvirt.virt:
+            command: list_vms
+            state: running
+          register: running_vms
+          ignore_errors: true
+
+        - name: Fail when VMs are still running
+          ansible.builtin.fail:
+            msg:
+              - "VMs are still running, shutdown all VMs first."
+              - "{{ running_vms.list_vms }}"
+          when: running_vms.list_vms | default('') | length > 0
+
+        - name: Stop and disable services
+          ansible.builtin.systemd_service:
+            name: "{{ item.name }}"
+            state: stopped
+            enabled: false
+          loop: "{{ services }}"
+
+        - name: Unmount bind mounts
+          ansible.posix.mount:
+            path: "{{ item.path }}"
+            state: unmounted
+          loop: "{{ bind_mounts }}"
+
+      tags:
+        - never
+        - services-stop
+
+
+    - name: Block for service init
+      block:
+        - name: Prompt user to confirm init
+          ansible.builtin.pause:
+            prompt: "This will create the bind mount directories that will be used to store the services - only do this if your services have no current bind mounts - push enter to continue"
+
+        - name: Creating the following directories
+          ansible.builtin.debug:
+            msg: ""
+          loop: "{{ bind_mounts }}"
+          loop_control:
+            label: "{{ item.src }}"
+
+        - name: Create service directories, fail if one already exists
+          ansible.builtin.file:
+            path: "{{ item.src }}"
+            state: directory
+            owner: root
+            group: root
+          register: bindmount
+          failed_when: not bindmount.changed
+          loop: "{{ bind_mounts }}"
+          loop_control:
+            label: "{{ item.src }}"
+
+        - name: Set service directories as not immutable
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            attributes: "-i"
+          loop: "{{ bind_mounts }}"
+
+        - name: Copy files from original service directory to new one
+          ansible.builtin.copy:
+            src: "{{ item.path }}/"
+            dest: "{{ item.src }}/"
+            remote_src: true
+          loop: "{{ bind_mounts }}"
+
+      tags:
+        - never
+        - services-init
+
+
+    - name: Block for service setup
+      block:
+        - name: Install services software
+          ansible.builtin.package:
+            name: "{{ item.package }}"
+            state: present
+          loop: "{{ services }}"
+
+        - name: Set services selinux booleans
+          ansible.posix.seboolean:
+            name: "{{ item }}"
+            state: true
+            persistent: true
+          loop: "{{ sebooleans }}"
+
+        - name: Set service directories as immutable
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            attributes: "+i"
+          loop: "{{ bind_mounts }}"
+      tags:
+        - never
+        - services-setup

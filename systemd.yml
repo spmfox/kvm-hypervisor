@@ -1,0 +1,29 @@
+- hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Create systemd unit files for services
+      ansible.builtin.template:
+        src: "systemd/{{ item }}.j2"
+        dest: "/etc/systemd/system/{{ item }}"
+      loop: "{{ services }}"
+      register: systemd1
+
+    - name: Create systemd unit files for timers
+      ansible.builtin.template:
+        src: "systemd/{{ item }}.j2"
+        dest: "/etc/systemd/system/{{ item }}"
+      loop: "{{ timers }}"
+      register: systemd2
+
+    - name: Reload systemd daemon if needed
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+      when: systemd1.changed or systemd2.changed
+
+    - name: Enable and start systemd timers
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop: "{{ timers }}"
