@@ -1,0 +1,9 @@
+[Unit]
+Description=Timer for sanoid.service
+
+[Timer]
+OnCalendar=*-*-* *:0,15,30,45:00
+Unit=sanoid.service
+
+[Install]
+WantedBy=basic.target

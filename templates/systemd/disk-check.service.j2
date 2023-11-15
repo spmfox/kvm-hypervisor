@@ -1,0 +1,9 @@
+[Unit]
+Description=disk check
+OnFailure=alert-notification@%i.service
+
+[Service]
+Type=oneshot
+{% for disk in disks -%}
+ExecStart=/usr/sbin/smartctl -H -q errorsonly /dev/disk/by-id/{{ disk }}
+{% endfor %}

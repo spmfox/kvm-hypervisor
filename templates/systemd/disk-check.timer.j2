@@ -1,0 +1,10 @@
+[Unit]
+Description=disk-check.service timer
+
+[Timer]
+OnBootSec=120s
+OnUnitActiveSec=24h
+Unit=disk-check.service
+
+[Install]
+WantedBy=basic.target

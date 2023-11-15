@@ -1,0 +1,10 @@
+[Unit]
+Description=backup replication service
+OnFailure=alert-notification@%i.service
+ConditionPathExists={{ syncoid.path.binary }}
+
+[Service]
+Type=oneshot
+{% for syncoid_job in syncoid.jobs -%}
+ExecStart={{ syncoid.path.binary }} {{ syncoid_job }}
+{% endfor %}

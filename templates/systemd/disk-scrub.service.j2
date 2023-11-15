@@ -1,0 +1,12 @@
+[Unit]
+Description=disk scrub
+OnFailure=alert-notification@%i.service
+
+[Service]
+Type=oneshot
+{% for disk in disks -%}
+ExecStart=/usr/sbin/smartctl -t short -q errorsonly /dev/disk/by-id/{{ disk }}
+{% endfor %}
+{% for zfs_pool in zfs_pools -%}
+ExecStart=/usr/sbin/zpool scrub {{ zfs_pool }}
+{% endfor %}
