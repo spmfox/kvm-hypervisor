@@ -1,0 +1,38 @@
+- hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Discover all running VMs
+      community.libvirt.virt:
+        command: list_vms
+        state: running
+      register: running_vms
+      tags:
+        - never
+        - all-stop
+
+    - name: Discover all VMs
+      community.libvirt.virt:
+        command: list_vms
+      register: all_vms
+      tags:
+        - never
+        - all-start
+
+    - name: Issuing shutdown command to all running VMs
+      community.libvirt.virt:
+        state: shutdown
+        name: "{{ item }}"
+      loop: "{{ running_vms.list_vms }}"
+      tags:
+        - never
+        - all-stop
+
+    - name: Issuing start command to all defined VMs
+      community.libvirt.virt:
+        state: running
+        name: "{{ item }}"
+      loop: "{{ all_vms.list_vms }}"
+      tags:
+        - never
+        - all-start
