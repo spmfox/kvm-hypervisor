@@ -182,7 +182,7 @@
         - never
         - services-enable
 
-    - name: Enable services
+    - name: Disable services
       ansible.builtin.systemd_service:
         name: "{{ item.name }}"
         enabled: false
