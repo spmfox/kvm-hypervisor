@@ -10,12 +10,12 @@
             state: unmounted
           loop: "{{ bind_mounts }}"
 
-        - name: Starting bind mounts
+        - name: Starting bind mounts ephemerally
           ansible.posix.mount:
             path: "{{ item.path }}"
             src: "{{ item.src }}"
             opts: bind
-            state: mounted
+            state: ephemeral
             fstype: none
           loop: "{{ bind_mounts }}"
 
@@ -72,6 +72,7 @@
       tags:
         - never
         - services-stop
+        - services-fstab-remove
 
 
     - name: Block for service init
@@ -126,11 +127,49 @@
             persistent: true
           loop: "{{ sebooleans }}"
 
-        - name: Set service directories as immutable
-          ansible.builtin.file:
-            path: "{{ item.path }}"
-            attributes: "+i"
-          loop: "{{ bind_mounts }}"
       tags:
         - never
         - services-setup
+
+
+    - name: Make original service directories immutable
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        attributes: "+i"
+      loop: "{{ bind_mounts }}"
+      tags:
+        - never
+        - services-immutable-add
+
+    - name: Make origianl service directories un-immutable
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        attributes: "-i"
+      loop: "{{ bind_mounts }}"
+      tags:
+        - never
+        - services-immutable-remove
+
+    - name: Add services to fstab
+      ansible.posix.mount:
+        path: "{{ item.path }}"
+        src: "{{ item.src }}"
+        opts: bind
+        state: mounted
+        fstype: none
+      loop: "{{ bind_mounts }}"
+      tags:
+        - never
+        - services-fstab-add
+
+    - name: Remove services from fstab
+      ansible.posix.mount:
+        path: "{{ item.path }}"
+        src: "{{ item.src }}"
+        opts: bind
+        state: absent_from_fstab
+        fstype: none
+      loop: "{{ bind_mounts }}"
+      tags:
+        - never
+        - services-fstab-remove
