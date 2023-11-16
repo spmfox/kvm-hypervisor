@@ -56,11 +56,10 @@
               - "{{ running_vms.list_vms }}"
           when: running_vms.list_vms | default('') | length > 0
 
-        - name: Stop and disable services
+        - name: Stop services
           ansible.builtin.systemd_service:
             name: "{{ item.name }}"
             state: stopped
-            enabled: false
           loop: "{{ services }}"
 
         - name: Unmount bind mounts
@@ -173,3 +172,22 @@
       tags:
         - never
         - services-fstab-remove
+
+    - name: Enable services
+      ansible.builtin.systemd_service:
+        name: "{{ item.name }}"
+        enabled: true
+      loop: "{{ services }}"
+      tags:
+        - never
+        - services-enable
+
+    - name: Enable services
+      ansible.builtin.systemd_service:
+        name: "{{ item.name }}"
+        enabled: false
+      loop: "{{ services }}"
+      tags:
+        - never
+        - services-disable
+
