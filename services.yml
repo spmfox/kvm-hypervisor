@@ -99,12 +99,6 @@
           loop_control:
             label: "{{ item.src }}"
 
-        - name: Set service directories as not immutable
-          ansible.builtin.file:
-            path: "{{ item.path }}"
-            attributes: "-i"
-          loop: "{{ bind_mounts }}"
-
         - name: Copy files from original service directory to new one
           ansible.builtin.copy:
             src: "{{ item.path }}/"
