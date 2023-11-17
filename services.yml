@@ -153,7 +153,7 @@
       ansible.posix.mount:
         path: "{{ item.path }}"
         src: "{{ item.src }}"
-        opts: bind
+        opts: "bind,x-systemd.requires=zfs-mount.service"
         state: mounted
         fstype: none
       loop: "{{ bind_mounts }}"
