@@ -4,12 +4,6 @@
   tasks:
     - name: Block for starting services
       block:
-        - name: Unmount bind mounts
-          ansible.posix.mount:
-            path: "{{ item.path }}"
-            state: unmounted
-          loop: "{{ bind_mounts }}"
-
         - name: Starting bind mounts ephemerally
           ansible.posix.mount:
             path: "{{ item.path }}"
@@ -33,7 +27,7 @@
         - name: Restart services
           ansible.builtin.systemd_service:
             name: "{{ item.name }}"
-            state: restarted
+            state: started
           loop: "{{ services }}"
       tags:
         - never
