@@ -36,3 +36,21 @@
       tags:
         - never
         - all-start
+
+    - name: Discover all inactive storage pools
+      community.libvirt.virt_pool:
+        command: list_pools
+        state: inactive
+      register: inactive_pools
+      tags:
+        - never
+        - prune-storage-pools
+
+    - name: Undefine inactive storage pools
+      community.libvirt.virt_pool:
+        command: undefine
+        name: "{{ item }}"
+      loop: "{{ inactive_pools.list_pools }}"
+      tags:
+        - never
+        - prune-storage-pools 
